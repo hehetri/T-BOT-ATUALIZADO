@@ -44,7 +44,9 @@ public class RoomServer extends Thread {
 
 					if (data[0]==(byte)0xC9 && data[1]==(byte)0x00) {
 						int numb = (data[4] & 0xFF) | (data[5] & 0xFF) << 8;
-						bot[numb].setroomport(address.toString(), port);
+						if (numb >= 0 && numb < bot.length && bot[numb] != null) {
+							bot[numb].setroomport(address.toString(), port);
+						}
 					} else {
 						byte[] packandheadb = { (byte) 0xC8, (byte) 0x00, (byte) 0x04, (byte) 0x00, (byte) 0x01, (byte) 0x00,(byte) 0x00, data[6] };
 						DatagramPacket dp = new DatagramPacket(packandheadb, packandheadb.length, address, port);

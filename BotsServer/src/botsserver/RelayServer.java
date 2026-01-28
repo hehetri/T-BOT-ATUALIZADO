@@ -71,7 +71,7 @@ public class RelayServer extends Thread {
     private static Runnable handlepack(final DatagramPacket packet, final RelayStore relaystore, final DatagramSocket relaySocket) {
         return new Runnable() {
           @Override
-		    public void run() {
+          public void run() {
         	  try{
         		  InetAddress address = packet.getAddress();
         		  byte[] data = null;
@@ -79,6 +79,11 @@ public class RelayServer extends Thread {
         		  if (!Ipbanned(address)){
         			  portout = packet.getPort();
         			  data = packet.getData();
+        		  } else {
+        			  return;
+        		  }
+        		  if (data == null || data.length < 2) {
+        			  return;
         		  }
         		  int ret = 0;
         		  ret+=(data[1] & 0xFF);

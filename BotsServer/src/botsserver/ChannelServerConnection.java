@@ -8,6 +8,8 @@ import java.nio.ByteBuffer;
 import java.sql.ResultSet;
 
 public class ChannelServerConnection extends Thread{
+    private static final int HEADER_SIZE = 4;
+    private static final int MAX_PACKET_SIZE = 4096;
     protected ChannelServer server;
     protected Lobby lobby;
 	protected Socket socket;
@@ -73,7 +75,7 @@ public class ChannelServerConnection extends Thread{
             }
             else
             {
-            	if(isbanned(this.account)!=0)
+            	if(this.account != null && isbanned(this.account)!=0)
             	{
             		debug("banned account tried logging in.");
             		arr[0]=this.account;
@@ -376,17 +378,20 @@ public class ChannelServerConnection extends Thread{
                 }
                 case 0x0B2B:
                 {
-                	if (bot.roomnum==bot.room.roomowner)
+                	if (bot.room!=null && bot.roomnum==bot.room.roomowner)
                 		bot.room.Start();
                     break;
                 }
                 case 0x3E2B:
                 {
-                	bot.room.readyToPlay(bot.roomnum);
+                	if (bot.room!=null)
+                		bot.room.readyToPlay(bot.roomnum);
                 	break;
                 }
                 case 0x392B:
                 {
+                	if (bot.room==null)
+                		break;
                 	pack.getInt(2);
                     int slot = pack.getInt(2);
                     pack.getInt(2);
@@ -396,16 +401,20 @@ public class ChannelServerConnection extends Thread{
                 }
                 case 0x6F2B:
                 {
-                	bot.room.PreDead(bot.roomnum);
+                	if (bot.room!=null)
+                		bot.room.PreDead(bot.roomnum);
                 	break;
                 }
                 case 0x362B:
                 {
-                	bot.room.EquipPackUse(bot.roomnum);
+                	if (bot.room!=null)
+                		bot.room.EquipPackUse(bot.roomnum);
                 	break;
                 }
                 case 0x3A2B:
                 {
+                	if (bot.room==null)
+                		break;
                 	int num = pack.getInt(2);
                     int typ = pack.getInt(2);
                     int killedby = pack.getInt(2);
@@ -415,6 +424,8 @@ public class ChannelServerConnection extends Thread{
                 }
                 case 0x3B2B:
                 {
+                	if (bot.room==null)
+                		break;
                 	pack.getInt(2);
                     pack.getInt(2);
                     int bywho = pack.getInt(2);
@@ -424,6 +435,8 @@ public class ChannelServerConnection extends Thread{
                 }
                 case 0x3C2B:
                 {
+                	if (bot.room==null)
+                		break;
                 	pack.getInt(2);
                     int num = pack.getInt(1);
                     int typ = pack.getInt(1);
@@ -758,6 +771,20 @@ public class ChannelServerConnection extends Thread{
         } catch (Exception e){
         }
     }
+
+    private byte[] readFully(int length) throws IOException
+    {
+        byte[] buffer = new byte[length];
+        int offset = 0;
+        while (offset < length) {
+            int read = socketIn.read(buffer, offset, length - offset);
+            if (read == -1) {
+                return null;
+            }
+            offset += read;
+        }
+        return buffer;
+    }
     
     public int getcmd(byte[] packet)
     {
@@ -777,37 +804,32 @@ public class ChannelServerConnection extends Thread{
     
     protected byte[] read()
     {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
-        int codePoint;
-
         try
         {
-            for (int i = 0; i < 4; i++)
-            {
-                codePoint = this.socketIn.read();
-                buffer.put((byte)codePoint);//(byte)Main.decrypt[codePoint & 0xFF]);
+            byte[] header = readFully(HEADER_SIZE);
+            if (header == null)
+                return null;
+            if (bytetoint(header, 0) == 0xFFFF)
+                return null;
+            int plen = bytetoint(header, 2);
+            if (plen < 0 || plen > MAX_PACKET_SIZE) {
+                debug("Invalid packet length: " + plen);
+                return null;
             }
-            int plen = bytetoint(buffer.array(), 2);
-            if (bytetoint(buffer.array(), 0)==0xFFFF)
-            	return null;
-            byte[] quickstore = buffer.array();
-            buffer = ByteBuffer.allocate(plen+5);
-            buffer.put(quickstore);
-            if (plen >= 1)
-            {
-
-                for (int i = 0; i < plen; i++)
-                {
-                    codePoint = this.socketIn.read();
-                    buffer.put((byte)codePoint);//(byte)Main.decrypt[codePoint & 0xFF]);
-                }
+            ByteBuffer buffer = ByteBuffer.allocate(plen + 5);
+            buffer.put(header);
+            if (plen >= 1) {
+                byte[] body = readFully(plen);
+                if (body == null)
+                    return null;
+                buffer.put(body);
             }
+            return buffer.array();
         } catch (Exception e)
         {
             debug("Error (read): " + e);
             return null;
         }
-		return buffer.array();
     }
     
     public void run()
@@ -833,7 +855,7 @@ public class ChannelServerConnection extends Thread{
     protected void closecon()
     {
     	try{
-    		if (bot.finalize)
+    		if (bot == null || bot.finalize)
     			return;
     		bot.finalize=true;
 	    	if (bot.room!=null && bot.room.Exit(bot.roomnum, false))
