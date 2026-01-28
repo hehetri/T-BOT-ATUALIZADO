@@ -854,16 +854,19 @@ public class ChannelServerConnection extends Thread{
     
     protected void closecon()
     {
+        BotClass currentBot = bot;
     	try{
-    		if (bot == null || bot.finalize)
+    		if (currentBot == null || currentBot.finalize)
     			return;
-    		bot.finalize=true;
-	    	if (bot.room!=null && bot.room.Exit(bot.roomnum, false))
-	        	bot.RemoveRoom(bot.room);
-	    	bot.room=null;
+    		currentBot.finalize=true;
+	    	if (currentBot.room!=null && currentBot.room.Exit(currentBot.roomnum, false))
+	        	currentBot.RemoveRoom(currentBot.room);
+	    	currentBot.room=null;
 	    }catch (Exception e){debug("Error occured while removing user from room: "+e);}
     	try{
-		    bot.closeThread();
+    	    if (currentBot != null) {
+		        currentBot.closeThread();
+    	    }
 		    bot=null;
 		    server=null;
 		    sql=null;

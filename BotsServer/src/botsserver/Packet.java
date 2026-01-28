@@ -10,7 +10,8 @@ import java.util.Arrays;
 
 public class Packet {
 
-    private ByteBuffer packet = ByteBuffer.allocate(2000);
+    private static final int DEFAULT_PACKET_SIZE = 2000;
+    private ByteBuffer packet = ByteBuffer.allocate(DEFAULT_PACKET_SIZE);
     private ByteBuffer header = ByteBuffer.allocate(4);
     private int packlen = 0;
     private int readstart = 0;
@@ -24,6 +25,18 @@ public class Packet {
     
     protected void debug(String msg) {
         Main.debug("Packet: "+ msg);
+    }
+
+    private void ensureCapacity(int additionalBytes)
+    {
+        int required = packlen + additionalBytes;
+        if (required <= packet.capacity())
+            return;
+        int newCapacity = Math.max(required, packet.capacity() * 2);
+        ByteBuffer newPacket = ByteBuffer.allocate(newCapacity);
+        newPacket.order(packet.order());
+        newPacket.put(packet.array(), 0, packlen);
+        packet = newPacket;
     }
     
     //Header
@@ -66,7 +79,8 @@ public class Packet {
     	//header.order(java.nio.ByteOrder.LITTLE_ENDIAN);
     	//readstart+=4;
     	byte[] save=Arrays.copyOfRange(packet.array(),4,packlen);
-    	packet=ByteBuffer.allocate(2000);
+    	packet=ByteBuffer.allocate(Math.max(DEFAULT_PACKET_SIZE, save.length));
+    	packet.order(java.nio.ByteOrder.LITTLE_ENDIAN);
     	packet.put(save);
     	packlen-=4;
     }
@@ -89,6 +103,7 @@ public class Packet {
     public void setPacket(byte[] pack)
     {
     	clean();
+        ensureCapacity(pack.length);
         this.packet.put(pack);
         packlen+=pack.length;
     }
@@ -97,7 +112,8 @@ public class Packet {
     {
         try {
         	byte[] temp = pack.getPacket();
-        	packet = ByteBuffer.allocate(10000);
+        	packet = ByteBuffer.allocate(Math.max(DEFAULT_PACKET_SIZE, temp.length));
+            packet.order(java.nio.ByteOrder.LITTLE_ENDIAN);
 			this.packet.put(temp);
 	        packlen=temp.length;
 		} catch (Exception e) {}
@@ -107,6 +123,7 @@ public class Packet {
     {
         try
         {
+            ensureCapacity(2);
         	byte[] two = {b1,b2};
         	packet.put(two);
         	packlen+=2;
@@ -119,6 +136,7 @@ public class Packet {
     public void addString(String string)
     {
     	try{
+            ensureCapacity(string.length());
 	    	packet.put(string.getBytes("ISO8859-1"));
 	    	packlen+=string.length();
     	}catch (Exception e){}
@@ -198,6 +216,7 @@ public class Packet {
     public void addInt(int var, int num, boolean reverse)
     {
         try{
+            ensureCapacity(num);
         	if(reverse){
         		if(num==1)
         			packet.put((byte)var);
@@ -244,6 +263,7 @@ public class Packet {
     {
         try
         {
+            ensureCapacity(1);
 	        packet.put(b1);
 	        packlen+=1;
         }catch (Exception e){}
@@ -253,6 +273,7 @@ public class Packet {
     {
         try
         {
+            ensureCapacity(2);
         	byte[] two = {b1, b2};
         	packet.put(two);
         	packlen+=2;
@@ -265,6 +286,7 @@ public class Packet {
     {
         try
         {
+            ensureCapacity(4);
         	byte[] two = {b1, b2, b3, b4};
 	        packet.put(two);
 	        packlen+=4;
@@ -277,6 +299,7 @@ public class Packet {
     {
         try
         {
+            ensureCapacity(two.length);
         	packet.put(two);
         	packlen+=two.length;
         }
@@ -298,7 +321,7 @@ public class Packet {
 
     public void clean(){
         this.header = ByteBuffer.allocate(4);
-        this.packet = ByteBuffer.allocate(2000);
+        this.packet = ByteBuffer.allocate(DEFAULT_PACKET_SIZE);
         packlen=0;
         readstart=0;
         header.order(java.nio.ByteOrder.LITTLE_ENDIAN);
@@ -310,7 +333,7 @@ public class Packet {
     	header.order(java.nio.ByteOrder.LITTLE_ENDIAN);
     }
     public void cleanpacket() {
-    	this.packet = ByteBuffer.allocate(2000);
+    	this.packet = ByteBuffer.allocate(DEFAULT_PACKET_SIZE);
     	packlen=0;
     	packet.order(java.nio.ByteOrder.LITTLE_ENDIAN);
     }
