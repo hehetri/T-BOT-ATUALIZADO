@@ -8,10 +8,12 @@ public class RelayTCP extends Thread
     protected int port = 11004;
     private boolean listening = false;
     private Lobby lobby;
+    protected RelayStore relaystore;
     
-    public RelayTCP(int serverPort, Lobby lobbi) {
+    public RelayTCP(int serverPort, Lobby lobbi, RelayStore relaystore) {
     	this.lobby = lobbi;
         this.port = serverPort;
+        this.relaystore = relaystore;
         this.listening = false;
     }
     

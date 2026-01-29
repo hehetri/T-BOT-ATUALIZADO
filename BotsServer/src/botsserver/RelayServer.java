@@ -26,6 +26,12 @@ public class RelayServer extends Thread {
         this.port = sarverPort;
         this.listening = false;
     }
+
+    public RelayServer(int sarverPort, Lobby lobbi, RelayStore relaystore) {
+        this.port = sarverPort;
+        this.listening = false;
+        this.relaystore = relaystore;
+    }
     
     /**
      * Gets the server's port.
@@ -179,7 +185,11 @@ public class RelayServer extends Thread {
             this.relaySocket = new DatagramSocket(this.port);
             this.listening = true;
             debug("listening");
-            relaystore = new RelayStore(this, Main.sql);
+            if (relaystore == null) {
+                relaystore = new RelayStore(this, Main.sql);
+            } else {
+                relaystore.setServer(this);
+            }
             
 			while (true) {
 				DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);

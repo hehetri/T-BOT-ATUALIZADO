@@ -18,6 +18,11 @@ public class RelayStore {
     public int[][] roomallnums = new int[1800][8];
     public String[] charname = new String[600];
     
+    public RelayStore(SQLDatabase sqi)
+    {
+    	this(null, sqi);
+    }
+
     public RelayStore(RelayServer servaer, SQLDatabase sqi)
     {
     	this.sql = sqi;
@@ -28,6 +33,11 @@ public class RelayStore {
     			roomnums[i][j] = -1;
     		}
     	}
+    }
+
+    public void setServer(RelayServer servaer)
+    {
+    	this.server = servaer;
     }
     
     public void debug(String msg)

@@ -28,6 +28,7 @@ public class RelayTCPConnection extends Thread {
 	
     public RelayTCPConnection(Socket socket, RelayTCP server, Lobby lobbi) {
         this.socket = socket;
+        this.relaystore = server.relaystore;
     }
     
     public void debug(String msg)
@@ -116,7 +117,8 @@ public class RelayTCPConnection extends Thread {
             {
             	case 0x32A0: 
             	{
-            		relaystore = Main.getRelayStore();
+            		if (relaystore == null)
+            			relaystore = Main.getRelayStore();
             		int i = 0;
                     int num=1;
                     String[] arr = new String[0];
