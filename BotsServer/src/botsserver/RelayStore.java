@@ -18,12 +18,26 @@ public class RelayStore {
     public int[][] roomallnums = new int[1800][8];
     public String[] charname = new String[600];
     
+    public RelayStore(SQLDatabase sqi)
+    {
+    	this(null, sqi);
+    }
+
     public RelayStore(RelayServer servaer, SQLDatabase sqi)
     {
     	this.sql = sqi;
     	this.server = servaer;
-    	for (int i = 0; i<600; i++)
+    	for (int i = 0; i<600; i++) {
     		roomids[i]=-1;
+    		for (int j = 0; j < 8; j++) {
+    			roomnums[i][j] = -1;
+    		}
+    	}
+    }
+
+    public void setServer(RelayServer servaer)
+    {
+    	this.server = servaer;
     }
     
     public void debug(String msg)
@@ -107,17 +121,16 @@ public class RelayStore {
     {
     	for(int i=0; i<600; i++)
     	{
-    		if(this.name[i]==username)
+    		if(this.name[i]!=null && this.name[i].equalsIgnoreCase(username))
     		{
     			String[] arr = {username};
-    			ResultSet lvl = sql.psquery("SELECT * FROM `lobbylist` WHERE name=?", arr);
-    			try{
-    	    	if (lvl.next()){
-    	        	int clientnum=lvl.getInt("num");
-    	        	if (clientnum==i)
-    	        		return true;
-    	    	}
-    			}catch (Exception e){}
+    			try (ResultSet lvl = sql.psquery("SELECT * FROM `lobbylist` WHERE name=?", arr)) {
+        			if (lvl.next()){
+        	        	int clientnum=lvl.getInt("num");
+        	        	if (clientnum==i)
+        	        		return true;
+        	    	}
+    			} catch (Exception e) {}
     		}
     	}
         return false;

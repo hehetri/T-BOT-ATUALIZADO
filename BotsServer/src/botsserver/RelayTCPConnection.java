@@ -10,6 +10,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class RelayTCPConnection extends Thread {
+    private static final int HEADER_SIZE = 4;
+    private static final int MAX_PACKET_SIZE = 4096;
     protected Socket socket;
     protected InputStream socketIn;
     protected OutputStream socketOut;
@@ -26,6 +28,7 @@ public class RelayTCPConnection extends Thread {
 	
     public RelayTCPConnection(Socket socket, RelayTCP server, Lobby lobbi) {
         this.socket = socket;
+        this.relaystore = server.relaystore;
     }
     
     public void debug(String msg)
@@ -114,7 +117,8 @@ public class RelayTCPConnection extends Thread {
             {
             	case 0x32A0: 
             	{
-            		relaystore = Main.getRelayStore();
+            		if (relaystore == null)
+            			relaystore = Main.getRelayStore();
             		int i = 0;
                     int num=1;
                     String[] arr = new String[0];
@@ -235,36 +239,46 @@ public class RelayTCPConnection extends Thread {
     
     protected byte[] read()
     {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
-        int codePoint;
-
         try
         {
-            for (int i = 0; i < 4; i++)
-            {
-                codePoint = this.socketIn.read();
-                buffer.put((byte)codePoint);//(byte)Main.decrypt[codePoint & 0xFF]);
-            }
-            int plen = bytetoint(buffer.array(), 2);
-            if (bytetoint(buffer.array(), 0)==0xFFFF)
+            byte[] header = readFully(HEADER_SIZE);
+            if (header == null)
+                return null;
+            int plen = bytetoint(header, 2);
+            if (bytetoint(header, 0)==0xFFFF)
             	return null;
-            byte[] quickstore = buffer.array();
-            buffer = ByteBuffer.allocate(plen+5);
-            buffer.put(quickstore);
-            if (plen >= 1)
-            {
-                for (int i = 0; i < plen; i++)
-                {
-                    codePoint = this.socketIn.read();
-                    buffer.put((byte)codePoint);//(byte)Main.decrypt[codePoint & 0xFF]);
-                }
+            if (plen < 0 || plen > MAX_PACKET_SIZE) {
+                debug("Invalid packet length: " + plen);
+                return null;
             }
+            ByteBuffer buffer = ByteBuffer.allocate(plen + 5);
+            buffer.put(header);
+            if (plen >= 1) {
+                byte[] body = readFully(plen);
+                if (body == null)
+                    return null;
+                buffer.put(body);
+            }
+            return buffer.array();
         } catch (Exception e)
         {
             debug("Error (read): " + e);
             return null;
         }
-		return buffer.array();
+    }
+
+    private byte[] readFully(int length) throws IOException
+    {
+        byte[] buffer = new byte[length];
+        int offset = 0;
+        while (offset < length) {
+            int read = socketIn.read(buffer, offset, length - offset);
+            if (read == -1) {
+                return null;
+            }
+            offset += read;
+        }
+        return buffer;
     }
     
 	public void run()

@@ -11,6 +11,7 @@ public class Main {
     public static RoomServer roomserver;
     public static String str = new String();
     public static RelayServer relayserver;
+    public static RelayStore relayStore;
     protected static String ChannelName = "Cipherspace";
     public static String[] arg = null;
     public static int ChannelPort = 11002;
@@ -51,7 +52,7 @@ public class Main {
 	
 	public static RelayStore getRelayStore()
 	{
-		return relayserver.relaystore;
+		return relayStore;
 	}
 	
 	public static void StartupJobs()
@@ -66,7 +67,7 @@ public class Main {
 	}
 	
 	public static void relayrestart() {
-		relayserver = new RelayServer(RelayPort, channelServer.lobby);
+		relayserver = new RelayServer(RelayPort, channelServer.lobby, relayStore);
         relayserver.start();
 	}
 	
@@ -86,14 +87,16 @@ public class Main {
             
             StartupJobs();
             
-            relayserver = new RelayServer(RelayPort, channelServer.lobby);
-            relayserver.start();
-            
-            Relaytcp = new RelayTCP(RelayTCPPort, channelServer.lobby);
+            relayStore = new RelayStore(sql);
+
+            Relaytcp = new RelayTCP(RelayTCPPort, channelServer.lobby, relayStore);
 			Relaytcp.start();
 			
             roomserver = new RoomServer(RoomServerPort, channelServer.lobby);
 			roomserver.start();
+
+            relayserver = new RelayServer(RelayPort, channelServer.lobby, relayStore);
+            relayserver.start();
 			
         }catch(Exception e)
         {

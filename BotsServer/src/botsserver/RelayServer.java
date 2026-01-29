@@ -26,6 +26,12 @@ public class RelayServer extends Thread {
         this.port = sarverPort;
         this.listening = false;
     }
+
+    public RelayServer(int sarverPort, Lobby lobbi, RelayStore relaystore) {
+        this.port = sarverPort;
+        this.listening = false;
+        this.relaystore = relaystore;
+    }
     
     /**
      * Gets the server's port.
@@ -71,7 +77,7 @@ public class RelayServer extends Thread {
     private static Runnable handlepack(final DatagramPacket packet, final RelayStore relaystore, final DatagramSocket relaySocket) {
         return new Runnable() {
           @Override
-		    public void run() {
+          public void run() {
         	  try{
         		  InetAddress address = packet.getAddress();
         		  byte[] data = null;
@@ -79,6 +85,11 @@ public class RelayServer extends Thread {
         		  if (!Ipbanned(address)){
         			  portout = packet.getPort();
         			  data = packet.getData();
+        		  } else {
+        			  return;
+        		  }
+        		  if (data == null || data.length < 2) {
+        			  return;
         		  }
         		  int ret = 0;
         		  ret+=(data[1] & 0xFF);
@@ -174,7 +185,11 @@ public class RelayServer extends Thread {
             this.relaySocket = new DatagramSocket(this.port);
             this.listening = true;
             debug("listening");
-            relaystore = new RelayStore(this, Main.sql);
+            if (relaystore == null) {
+                relaystore = new RelayStore(this, Main.sql);
+            } else {
+                relaystore.setServer(this);
+            }
             
 			while (true) {
 				DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
